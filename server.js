@@ -29,7 +29,6 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED REJECTION!'.red);
   console.error(err.name, err.message);
-  // Log but don't exit - let server keep running for health checks
 });
 
 // Initialize Express app
@@ -38,10 +37,9 @@ const app = express();
 // Connect to database (non-blocking)
 connectDB().catch((err) => {
   console.error('Database connection error:', err.message);
-  // Don't exit - server can still respond to health checks
 });
 
-// Root route for Railway health checks - MUST be first
+// Root route for Railway health checks
 app.get('/', (req, res) => {
   console.log('Root route accessed');
   res.status(200).json({
@@ -51,7 +49,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Also handle root with trailing slash
 app.get('/api', (req, res) => {
   res.status(200).json({
     success: true,
@@ -59,12 +56,48 @@ app.get('/api', (req, res) => {
   });
 });
 
-// CORS configuration
+// ✅ CORS Configuration - Always allow localhost and production frontend
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'https://car-service-blond-five.vercel.app',
+  // Add more origins from environment variable if needed
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+];
+
+// Log allowed origins on startup
+console.log('🌐 CORS Allowed Origins:', allowedOrigins);
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (e.g., mobile apps, Postman, curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // ALWAYS allow localhost for development/testing (regardless of environment)
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      console.log(`✅ Allowed localhost origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      console.log(`✅ Allowed origin: ${origin}`);
+      callback(null, true);
+    } else {
+      console.error(`❌ Blocked by CORS: ${origin}`);
+      console.error(`Allowed origins:`, allowedOrigins);
+      callback(new Error(`Not allowed by CORS: ${origin}`));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 };
 
 // Middleware
@@ -98,7 +131,7 @@ const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 const server = app.listen(PORT, HOST, () => {
-  console.log(`Server is running on ${HOST}:${PORT}`.bgMagenta);
+  console.log(`✅ Server is running on ${HOST}:${PORT}`.bgMagenta);
 });
 
 // Graceful shutdown handler
@@ -112,4 +145,3 @@ process.on('SIGTERM', () => {
     });
   });
 });
-
