@@ -1,0 +1,530 @@
+{
+  "info": {
+    "name": "Rent A Car API - Complete Collection",
+    "description": "Complete API collection for Rent A Car backend with all endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Check Server Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test(\"Server is running\", function () {", "    pm.response.to.have.status(200);", "    var jsonData = pm.response.json();", "    pm.expect(jsonData.success).to.be.true;", "});"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check if server is running"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Endpoints",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["if (pm.response.code === 201) {", "    var jsonData = pm.response.json();", "    pm.environment.set(\"token\", jsonData.data.token);", "    pm.environment.set(\"user_id\", jsonData.data.user.id);", "    console.log(\"Token saved:\", jsonData.data.token);", "}"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/register",
+              "host": ["{{base_url}}"],
+              "path": ["users", "register"]
+            },
+            "description": "Register a new user"
+          },
+          "response": []
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["if (pm.response.code === 200) {", "    var jsonData = pm.response.json();", "    pm.environment.set(\"token\", jsonData.data.token);", "    pm.environment.set(\"user_id\", jsonData.data.user.id);", "    console.log(\"Token saved:\", jsonData.data.token);", "}"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/login",
+              "host": ["{{base_url}}"],
+              "path": ["users", "login"]
+            },
+            "description": "Login user"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/profile",
+              "host": ["{{base_url}}"],
+              "path": ["users", "profile"]
+            },
+            "description": "Get current user profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Smith\",\n  \"email\": \"johnsmith@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/profile",
+              "host": ["{{base_url}}"],
+              "path": ["users", "profile"]
+            },
+            "description": "Update user profile"
+          },
+          "response": []
+        }
+      ],
+      "description": "All user-related endpoints"
+    },
+    {
+      "name": "Category Endpoints",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": ["{{base_url}}"],
+              "path": ["categories"]
+            },
+            "description": "Get all categories"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Active Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories?status=Active",
+              "host": ["{{base_url}}"],
+              "path": ["categories"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "Active"
+                }
+              ]
+            },
+            "description": "Get only active categories"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/:id",
+              "host": ["{{base_url}}"],
+              "path": ["categories", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{category_id}}",
+                  "description": "Category ID"
+                }
+              ]
+            },
+            "description": "Get category by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category - Sedans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["if (pm.response.code === 201) {", "    var jsonData = pm.response.json();", "    pm.environment.set(\"category_id\", jsonData.data.category._id);", "    console.log(\"Category ID saved:\", jsonData.data.category._id);", "}"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Sedans",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Comfortable 4-door vehicles perfect for families and daily commuting",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "type": "text"
+                },
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload an image file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": ["{{base_url}}"],
+              "path": ["categories"]
+            },
+            "description": "Create Sedans category"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category - SUVs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "SUVs",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Larger vehicles ideal for adventure, cargo, and off-road driving",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "type": "text"
+                },
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload an image file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": ["{{base_url}}"],
+              "path": ["categories"]
+            },
+            "description": "Create SUVs category"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category - Luxury Cars",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Luxury Cars",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "High-end vehicles with premium features and exceptional comfort",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "type": "text"
+                },
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload an image file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": ["{{base_url}}"],
+              "path": ["categories"]
+            },
+            "description": "Create Luxury Cars category"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Premium Sedans",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated description for premium sedans",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "Active",
+                  "type": "text"
+                },
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload new image file (optional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/categories/:id",
+              "host": ["{{base_url}}"],
+              "path": ["categories", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{category_id}}",
+                  "description": "Category ID"
+                }
+              ]
+            },
+            "description": "Update category"
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Category Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/categories/:id/status",
+              "host": ["{{base_url}}"],
+              "path": ["categories", ":id", "status"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{category_id}}",
+                  "description": "Category ID"
+                }
+              ]
+            },
+            "description": "Toggle category status between Active/Inactive"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/categories/:id",
+              "host": ["{{base_url}}"],
+              "path": ["categories", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{category_id}}",
+                  "description": "Category ID"
+                }
+              ]
+            },
+            "description": "Delete category"
+          },
+          "response": []
+        }
+      ],
+      "description": "All category endpoints (Admin only for create/update/delete)"
+    },
+    {
+      "name": "Test User Registration",
+      "item": [
+        {
+          "name": "Register Sarah Johnson",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sarah Johnson\",\n  \"email\": \"sarah@example.com\",\n  \"password\": \"sarah123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/register",
+              "host": ["{{base_url}}"],
+              "path": ["users", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register Mike Anderson",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mike Anderson\",\n  \"email\": \"mike@example.com\",\n  \"password\": \"mike123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/register",
+              "host": ["{{base_url}}"],
+              "path": ["users", "register"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
