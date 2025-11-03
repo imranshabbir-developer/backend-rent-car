@@ -63,6 +63,7 @@ const allowedOrigins = [
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
   'https://car-service-blond-five.vercel.app',
+  'https://car-service-6cizcir66-future-vision.vercel.app/',
   // Add more origins from environment variable if needed
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ];
