@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import colors from 'colors';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import connectDB from './config/dbConfig.js';
@@ -34,6 +35,21 @@ process.on('unhandledRejection', (err) => {
 // Initialize Express app
 const app = express();
 
+// Ensure uploads directories exist on startup (important for Railway deployment)
+const uploadsDir = path.join(__dirname, 'uploads');
+const uploadsDirs = [
+  path.join(uploadsDir, 'cars'),
+  path.join(uploadsDir, 'categories'),
+];
+
+// Create uploads directories if they don't exist
+[uploadsDir, ...uploadsDirs].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log(`📁 Created directory: ${dir}`);
+  }
+});
+
 // Connect to database (non-blocking)
 connectDB().catch((err) => {
   console.error('Database connection error:', err.message);
@@ -63,7 +79,7 @@ const allowedOrigins = [
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
   'https://car-service-blond-five.vercel.app',
-  'https://car-service-6cizcir66-future-vision.vercel.app/',
+  'https://car-service-6cizcir66-future-vision.vercel.app',
   // Add more origins from environment variable if needed
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ];
