@@ -27,21 +27,32 @@ process.on('uncaughtException', (err) => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! Shutting down...'.red);
+  console.error('UNHANDLED REJECTION!'.red);
   console.error(err.name, err.message);
-  // Close server gracefully
-  process.exit(1);
+  // Log but don't exit - let server keep running for health checks
 });
-
-// Connect to database
-connectDB();
 
 // Initialize Express app
 const app = express();
 
+// Connect to database (non-blocking)
+connectDB().catch((err) => {
+  console.error('Database connection error:', err.message);
+  // Don't exit - server can still respond to health checks
+});
+
+// Root route for Railway health checks - MUST be first
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Backend API is running',
+    version: '1.0.0',
+  });
+});
+
 // CORS configuration
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || '*', // Allow all origins in development, specify in production
+  origin: process.env.FRONTEND_URL || '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -55,15 +66,6 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Root route for Railway health checks
-app.get('/', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Backend API is running',
-    version: '1.0.0',
-  });
-});
 
 // API Routes
 app.use('/api/v1/users', userRoutes);

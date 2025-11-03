@@ -9,9 +9,10 @@ const connectDB = async () => {
     });
 
     console.log(`Database connected successfully ${conn.connection.host}`.bgBlue);
+    return conn;
   } catch (error) {
-    console.error(`Error: ${error.message}`.red);
-    process.exit(1);
+    console.error(`Database connection error: ${error.message}`.red);
+    throw error; // Don't exit - let server handle it
   }
 };
 
