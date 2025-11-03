@@ -43,10 +43,19 @@ connectDB().catch((err) => {
 
 // Root route for Railway health checks - MUST be first
 app.get('/', (req, res) => {
+  console.log('Root route accessed');
   res.status(200).json({
     success: true,
     message: 'Backend API is running',
     version: '1.0.0',
+  });
+});
+
+// Also handle root with trailing slash
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'API endpoints available at /api/v1',
   });
 });
 
