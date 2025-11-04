@@ -12,6 +12,7 @@ import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import userRoutes from './routes/userRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import carRoutes from './routes/carRoutes.js';
+import blogRoutes from './routes/blogRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,6 +131,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/cars', carRoutes);
+app.use('/api/v1/blogs', blogRoutes);
 
 // Health check route
 app.get('/api/v1/health', (req, res) => {
