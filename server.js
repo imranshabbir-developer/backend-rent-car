@@ -141,6 +141,11 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
+// Handle favicon requests (browsers automatically request this)
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // 204 No Content - standard response for missing favicon
+});
+
 // Error handling middleware
 app.use(notFound);
 app.use(errorHandler);
