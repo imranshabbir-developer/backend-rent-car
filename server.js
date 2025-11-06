@@ -73,44 +73,9 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ✅ CORS Configuration - Always allow localhost and production frontend
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001',
-  'https://car-service-blond-five.vercel.app',
-  'https://car-service-6cizcir66-future-vision.vercel.app',
-  // Add more origins from environment variable if needed
-  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
-];
-
-// Log allowed origins on startup
-console.log('🌐 CORS Allowed Origins:', allowedOrigins);
-
+// ✅ CORS Configuration - Allow all origins with all methods
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (e.g., mobile apps, Postman, curl)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // ALWAYS allow localhost for development/testing (regardless of environment)
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      console.log(`✅ Allowed localhost origin: ${origin}`);
-      return callback(null, true);
-    }
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      console.log(`✅ Allowed origin: ${origin}`);
-      callback(null, true);
-    } else {
-      console.error(`❌ Blocked by CORS: ${origin}`);
-      console.error(`Allowed origins:`, allowedOrigins);
-      callback(new Error(`Not allowed by CORS: ${origin}`));
-    }
-  },
+  origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
