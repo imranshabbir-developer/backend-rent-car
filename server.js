@@ -77,8 +77,6 @@ app.get('/api', (req, res) => {
 const allowedOrigins = [
   'http://localhost:3000',
   'https://car-service-blond-five.vercel.app',
-  'http://localhost:3000/',
-  'https://car-service-blond-five.vercel.app/',
 ];
 
 const corsOptions = {
