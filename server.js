@@ -73,9 +73,28 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ✅ CORS Configuration - Allow all origins with all methods
+// ✅ CORS Configuration - Allow specific origins with all methods
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://car-service-blond-five.vercel.app',
+  'http://localhost:3000/',
+  'https://car-service-blond-five.vercel.app/',
+];
+
 const corsOptions = {
-  origin: true, // Allow all origins
+  origin: function (origin, callback) {
+    // Allow requests with no origin (e.g., mobile apps, Postman, curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Not allowed by CORS: ${origin}`));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
