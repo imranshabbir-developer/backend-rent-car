@@ -26,6 +26,10 @@ const carSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    gallery: {
+      type: [String],
+      default: [],
+    },
 
     // Reference to the category
     category: {

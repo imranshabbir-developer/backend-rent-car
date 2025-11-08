@@ -25,7 +25,7 @@ router.post(
   '/',
   verifyToken,
   isAdmin,
-  upload.single('carPhoto'),
+  upload.array('carPhotos', 10), // Allow up to 10 images
   handleUploadError,
   createCar
 );
@@ -34,7 +34,7 @@ router.put(
   '/:id',
   verifyToken,
   isAdmin,
-  upload.single('carPhoto'),
+  upload.array('carPhotos', 10), // Allow up to 10 images
   handleUploadError,
   updateCar
 );

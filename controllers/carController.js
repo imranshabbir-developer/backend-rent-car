@@ -109,18 +109,22 @@ export const createCar = async (req, res, next) => {
     const carExists = await Car.findOne({ registrationNumber: registrationNumber?.toUpperCase() });
 
     if (carExists) {
-      // Delete uploaded file if car already exists
-      if (req.file) {
-        const filePath = path.join(__dirname, '../uploads/cars', req.file.filename);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
+      // Delete uploaded files if car already exists
+      if (req.files && req.files.length > 0) {
+        req.files.forEach((file) => {
+          const filePath = path.join(__dirname, '../uploads/cars', file.filename);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        });
       }
       return res.status(400).json({
         success: false,
         message: 'Car with this registration number already exists',
       });
     }
+
+    const { isFeatured } = req.body;
 
     // Build car object
     const carData = {
@@ -149,9 +153,18 @@ export const createCar = async (req, res, next) => {
       createdBy: req.user._id,
     };
 
-    // Add photo if uploaded
-    if (req.file) {
-      carData.carPhoto = `/uploads/cars/${req.file.filename}`;
+    // Handle multiple images
+    if (req.files && req.files.length > 0) {
+      // Set first image as carPhoto (for backward compatibility)
+      carData.carPhoto = `/uploads/cars/${req.files[0].filename}`;
+      // Add all images to gallery array
+      carData.gallery = req.files.map((file) => `/uploads/cars/${file.filename}`);
+    } else if (req.body.carPhoto) {
+      // Fallback: if single carPhoto is provided in body (backward compatibility)
+      carData.carPhoto = req.body.carPhoto;
+      if (!carData.gallery || carData.gallery.length === 0) {
+        carData.gallery = [req.body.carPhoto];
+      }
     }
 
     const car = await Car.create(carData);
@@ -164,12 +177,14 @@ export const createCar = async (req, res, next) => {
       },
     });
   } catch (error) {
-    // Delete uploaded file if error occurs
-    if (req.file) {
-      const filePath = path.join(__dirname, '../uploads/cars', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+    // Delete uploaded files if error occurs
+    if (req.files && req.files.length > 0) {
+      req.files.forEach((file) => {
+        const filePath = path.join(__dirname, '../uploads/cars', file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
     }
     next(error);
   }
@@ -221,12 +236,14 @@ export const updateCar = async (req, res, next) => {
         _id: { $ne: carId },
       });
       if (regExists) {
-        // Delete uploaded file if registration already exists
-        if (req.file) {
-          const filePath = path.join(__dirname, '../uploads/cars', req.file.filename);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
+        // Delete uploaded files if registration already exists
+        if (req.files && req.files.length > 0) {
+          req.files.forEach((file) => {
+            const filePath = path.join(__dirname, '../uploads/cars', file.filename);
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+          });
         }
         return res.status(400).json({
           success: false,
@@ -265,16 +282,54 @@ export const updateCar = async (req, res, next) => {
       };
     }
 
-    // Handle photo update
-    if (req.file) {
-      // Delete old photo if exists
-      if (car.carPhoto) {
-        const oldFilePath = path.join(__dirname, '..', car.carPhoto);
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
+    // Handle multiple images update
+    if (req.files && req.files.length > 0) {
+      // Handle existing gallery images deletion if new images are uploaded
+      // Only delete if user is replacing all images (we'll preserve existing if not replacing)
+      const newGallery = req.files.map((file) => `/uploads/cars/${file.filename}`);
+      
+      // If existingGallery is provided in body, merge with new images
+      // Otherwise, replace with new images
+      if (req.body.existingGallery) {
+        try {
+          const existingGallery = JSON.parse(req.body.existingGallery);
+          updateData.gallery = [...existingGallery, ...newGallery];
+        } catch (e) {
+          updateData.gallery = newGallery;
         }
+      } else {
+        // Delete old gallery images if replacing
+        if (car.gallery && car.gallery.length > 0) {
+          car.gallery.forEach((imgPath) => {
+            const oldFilePath = path.join(__dirname, '..', imgPath);
+            if (fs.existsSync(oldFilePath)) {
+              fs.unlinkSync(oldFilePath);
+            }
+          });
+        }
+        // Delete old carPhoto if exists
+        if (car.carPhoto) {
+          const oldFilePath = path.join(__dirname, '..', car.carPhoto);
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+          }
+        }
+        updateData.gallery = newGallery;
       }
-      updateData.carPhoto = `/uploads/cars/${req.file.filename}`;
+      
+      // Set first image as carPhoto (for backward compatibility)
+      updateData.carPhoto = newGallery[0];
+    } else if (req.body.existingGallery) {
+      // If no new files but existingGallery is provided, update gallery from body
+      try {
+        const existingGallery = JSON.parse(req.body.existingGallery);
+        updateData.gallery = existingGallery;
+        if (existingGallery.length > 0 && !updateData.carPhoto) {
+          updateData.carPhoto = existingGallery[0];
+        }
+      } catch (e) {
+        // Invalid JSON, ignore
+      }
     }
 
     car = await Car.findByIdAndUpdate(carId, updateData, {
@@ -292,12 +347,14 @@ export const updateCar = async (req, res, next) => {
       },
     });
   } catch (error) {
-    // Delete uploaded file if error occurs
-    if (req.file) {
-      const filePath = path.join(__dirname, '../uploads/cars', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+    // Delete uploaded files if error occurs
+    if (req.files && req.files.length > 0) {
+      req.files.forEach((file) => {
+        const filePath = path.join(__dirname, '../uploads/cars', file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
     }
     next(error);
   }
@@ -317,12 +374,22 @@ export const deleteCar = async (req, res, next) => {
       });
     }
 
-    // Delete associated photo file
+    // Delete associated photo files
     if (car.carPhoto) {
       const filePath = path.join(__dirname, '..', car.carPhoto);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
+    }
+    
+    // Delete gallery images
+    if (car.gallery && car.gallery.length > 0) {
+      car.gallery.forEach((imgPath) => {
+        const filePath = path.join(__dirname, '..', imgPath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
     }
 
     await Car.findByIdAndDelete(req.params.id);
