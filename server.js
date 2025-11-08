@@ -14,6 +14,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import carRoutes from './routes/carRoutes.js';
 import blogRoutes from './routes/blogRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
+import questionRoutes from './routes/questionRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -116,6 +117,7 @@ app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/cars', carRoutes);
 app.use('/api/v1/blogs', blogRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
+app.use('/api/v1/questions', questionRoutes);
 
 // Health check route
 app.get('/api/v1/health', (req, res) => {
