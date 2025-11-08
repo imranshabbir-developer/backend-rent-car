@@ -56,6 +56,10 @@ const carSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ['available', 'booked', 'maintenance', 'inactive'],
@@ -111,6 +115,7 @@ const carSchema = new mongoose.Schema(
 carSchema.index({ brand: 1 });
 carSchema.index({ category: 1 });
 carSchema.index({ status: 1 });
+carSchema.index({ isFeatured: 1 });
 carSchema.index({ location: 1 });
 carSchema.index({ registrationNumber: 1 });
 

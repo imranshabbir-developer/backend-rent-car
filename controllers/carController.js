@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 // @access  Public
 export const getAllCars = async (req, res, next) => {
   try {
-    const { status, category, brand, city, isAvailable } = req.query;
+    const { status, category, brand, city, isAvailable, isFeatured } = req.query;
 
     // Build query object
     const query = {};
@@ -29,6 +29,9 @@ export const getAllCars = async (req, res, next) => {
     }
     if (isAvailable !== undefined) {
       query.isAvailable = isAvailable === 'true';
+    }
+    if (isFeatured !== undefined) {
+      query.isFeatured = isFeatured === 'true';
     }
 
     const cars = await Car.find(query)
@@ -131,6 +134,7 @@ export const createCar = async (req, res, next) => {
       currency,
       depositAmount: depositAmount ? Number(depositAmount) : 0,
       isAvailable: isAvailable !== undefined ? isAvailable : true,
+      isFeatured: isFeatured !== undefined ? (isFeatured === 'true' || isFeatured === true) : false,
       status: status || 'available',
       location: {
         city,
@@ -198,6 +202,7 @@ export const updateCar = async (req, res, next) => {
       currency,
       depositAmount,
       isAvailable,
+      isFeatured,
       status,
       city,
       address,
@@ -242,6 +247,7 @@ export const updateCar = async (req, res, next) => {
     if (currency) updateData.currency = currency;
     if (depositAmount !== undefined) updateData.depositAmount = Number(depositAmount);
     if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
+    if (isFeatured !== undefined) updateData.isFeatured = isFeatured === 'true' || isFeatured === true;
     if (status) updateData.status = status;
     if (transmission) updateData.transmission = transmission;
     if (fuelType) updateData.fuelType = fuelType;
