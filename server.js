@@ -61,10 +61,27 @@ connectDB().catch((err) => {
 // Root route for Railway health checks
 app.get('/', (req, res) => {
   console.log('Root route accessed');
-  res.status(200).json({
+
+  const healthPayload = {
     success: true,
     message: 'Backend API is running',
     version: '1.0.0',
+    timestamp: new Date().toISOString(),
+  };
+
+  res.format({
+    'application/json': () => {
+      res.status(200).json(healthPayload);
+    },
+    'text/html': () => {
+      res
+        .status(200)
+        .set('Content-Type', 'application/json; charset=utf-8')
+        .send(JSON.stringify(healthPayload));
+    },
+    default: () => {
+      res.status(200).json(healthPayload);
+    },
   });
 });
 
@@ -80,6 +97,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'https://car-service-blond-five.vercel.app',
   'https://car-service-qiezfggti-future-vision.vercel.app',
+  'https://convoytravels.knowledgeorbit.com',
+  
 ];
 
 const corsOptions = {
