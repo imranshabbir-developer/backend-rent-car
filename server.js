@@ -99,7 +99,7 @@ const allowedOrigins = [
   'https://car-service-qiezfggti-future-vision.vercel.app',
   'https://convoytravels.knowledgeorbit.com',
   'https://convoytravels.pk',
-  'wwww://convoytravels.pk',
+  'https://convoytravels.pk/',
   
 ];
 
