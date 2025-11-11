@@ -98,6 +98,8 @@ const allowedOrigins = [
   'https://car-service-blond-five.vercel.app',
   'https://car-service-qiezfggti-future-vision.vercel.app',
   'https://convoytravels.knowledgeorbit.com',
+  'https://convoytravels.pk',
+  'wwww://convoytravels.pk',
   
 ];
 
