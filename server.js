@@ -13,6 +13,7 @@ import userRoutes from './routes/userRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import carRoutes from './routes/carRoutes.js';
 import blogRoutes from './routes/blogRoutes.js';
+import mainBlogRoutes from './routes/mainBlogRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import questionRoutes from './routes/questionRoutes.js';
 
@@ -43,6 +44,7 @@ const uploadsDir = path.join(__dirname, 'uploads');
 const uploadsDirs = [
   path.join(uploadsDir, 'cars'),
   path.join(uploadsDir, 'categories'),
+  path.join(uploadsDir, 'main-blogs'),
 ];
 
 // Create uploads directories if they don't exist
@@ -136,6 +138,7 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/cars', carRoutes);
 app.use('/api/v1/blogs', blogRoutes);
+app.use('/api/v1/main-blogs', mainBlogRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/questions', questionRoutes);
 
