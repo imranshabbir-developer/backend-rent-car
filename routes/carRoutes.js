@@ -7,6 +7,7 @@ import {
   deleteCar,
   toggleCarAvailability,
   updateCarStatus,
+  migrateSerialNo,
 } from '../controllers/carController.js';
 import { verifyToken, isAdmin } from '../middleware/authMiddleware.js';
 import { createUploadMiddleware, handleUploadError } from '../middleware/uploadMiddleware.js';
@@ -42,6 +43,7 @@ router.put(
 router.delete('/:id', verifyToken, isAdmin, deleteCar);
 router.patch('/:id/availability', verifyToken, isAdmin, toggleCarAvailability);
 router.patch('/:id/status', verifyToken, isAdmin, updateCarStatus);
+router.patch('/migrate-serialno', verifyToken, isAdmin, migrateSerialNo);
 
 export default router;
 

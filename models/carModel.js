@@ -103,6 +103,11 @@ const carSchema = new mongoose.Schema(
       required: [true, 'Registration number is required'],
       uppercase: true,
     },
+    serialNo: {
+      type: Number,
+      default: 1,
+      index: true,
+    },
 
     // Created by
     createdBy: {
@@ -122,6 +127,7 @@ carSchema.index({ status: 1 });
 carSchema.index({ isFeatured: 1 });
 carSchema.index({ location: 1 });
 carSchema.index({ registrationNumber: 1 });
+carSchema.index({ serialNo: 1 });
 
 const Car = mongoose.model('Car', carSchema);
 

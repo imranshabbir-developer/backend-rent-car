@@ -37,7 +37,7 @@ export const getAllCars = async (req, res, next) => {
     const cars = await Car.find(query)
       .populate('category', 'name description')
       .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 });
+      .sort({ serialNo: 1, createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -105,6 +105,9 @@ export const createCar = async (req, res, next) => {
       registrationNumber,
     } = req.body;
 
+    // Handle serialNo from either serialNo or SerialNo (for backward compatibility)
+    const serialNoValue = req.body.serialNo !== undefined ? req.body.serialNo : req.body.SerialNo;
+
     // Check if car with same registration number already exists
     const carExists = await Car.findOne({ registrationNumber: registrationNumber?.toUpperCase() });
 
@@ -150,6 +153,7 @@ export const createCar = async (req, res, next) => {
       mileage: mileage ? Number(mileage) : undefined,
       color,
       registrationNumber: registrationNumber.toUpperCase(),
+      serialNo: serialNoValue ? Number(serialNoValue) : 1,
       createdBy: req.user._id,
     };
 
@@ -272,6 +276,22 @@ export const updateCar = async (req, res, next) => {
     if (mileage !== undefined) updateData.mileage = Number(mileage);
     if (color) updateData.color = color;
     if (registrationNumber) updateData.registrationNumber = registrationNumber.toUpperCase();
+    // Handle serialNo - always update if provided in request body
+    // FormData sends values as strings, so we need to handle string conversion
+    // Check req.body directly (FormData fields are in req.body)
+    if ('serialNo' in req.body || 'SerialNo' in req.body) {
+      const serialNoValue = req.body.serialNo !== undefined ? req.body.serialNo : req.body.SerialNo;
+      if (serialNoValue === null || serialNoValue === '' || serialNoValue === undefined) {
+        updateData.serialNo = 1;
+      } else {
+        const serialNoNum = Number(serialNoValue);
+        updateData.serialNo = isNaN(serialNoNum) || serialNoNum < 1 ? 1 : serialNoNum;
+      }
+    } else if (serialNo !== undefined) {
+      // Fallback to destructured variable
+      const serialNoNum = Number(serialNo);
+      updateData.serialNo = isNaN(serialNoNum) || serialNoNum < 1 ? 1 : serialNoNum;
+    }
 
     // Handle location
     if (city || address) {
@@ -466,6 +486,35 @@ export const updateCarStatus = async (req, res, next) => {
       message: `Car status changed to ${status}`,
       data: {
         car,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Migrate existing cars to set serialNo: 1
+// @route   PATCH /api/v1/cars/migrate-serialno
+// @access  Private/Admin
+export const migrateSerialNo = async (req, res, next) => {
+  try {
+    // Update all cars that don't have serialNo or have null/undefined serialNo
+    const result = await Car.updateMany(
+      { serialNo: { $exists: false } },
+      { $set: { serialNo: 1 } }
+    );
+
+    // Also update cars where serialNo is null or undefined
+    const result2 = await Car.updateMany(
+      { serialNo: null },
+      { $set: { serialNo: 1 } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Migration completed. Updated ${result.modifiedCount + result2.modifiedCount} cars with serialNo: 1`,
+      data: {
+        updatedCount: result.modifiedCount + result2.modifiedCount,
       },
     });
   } catch (error) {
