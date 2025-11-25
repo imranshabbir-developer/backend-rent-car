@@ -44,6 +44,16 @@ export const errorHandler = (err, req, res, next) => {
 
 // Not found middleware
 export const notFound = (req, res, next) => {
+  // Handle missing static files (uploads) with proper 404 JSON response
+  if (req.originalUrl.startsWith('/uploads')) {
+    return res.status(404).json({
+      success: false,
+      message: 'Image not found',
+      path: req.originalUrl
+    });
+  }
+  
+  // For other routes, create error as before
   const error = new Error(`Not Found - ${req.originalUrl}`);
   res.status(404);
   next(error);
