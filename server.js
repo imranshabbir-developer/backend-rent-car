@@ -16,6 +16,7 @@ import blogRoutes from './routes/blogRoutes.js';
 import mainBlogRoutes from './routes/mainBlogRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import questionRoutes from './routes/questionRoutes.js';
+import specialSectionRoutes from './routes/specialSectionRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,6 +142,7 @@ app.use('/api/v1/blogs', blogRoutes);
 app.use('/api/v1/main-blogs', mainBlogRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/questions', questionRoutes);
+app.use('/api/v1/special-sections', specialSectionRoutes);
 
 // Health check route
 app.get('/api/v1/health', (req, res) => {
