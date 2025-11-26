@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { generateSlug, generateCanonicalUrl, generateSeoTitle, generateSeoDescription } from '../utils/seoUtils.js';
 
 const mainBlogSchema = new mongoose.Schema(
   {
@@ -32,6 +33,19 @@ const mainBlogSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    // SEO fields
+    seoTitle: {
+      type: String,
+      trim: true,
+    },
+    seoDescription: {
+      type: String,
+      trim: true,
+    },
+    canonicalUrl: {
+      type: String,
+      trim: true,
+    },
     // View count
     views: {
       type: Number,
@@ -43,14 +57,44 @@ const mainBlogSchema = new mongoose.Schema(
   }
 );
 
-// Generate slug from title before saving
-mainBlogSchema.pre('save', function (next) {
+// Generate slug and SEO fields before saving
+mainBlogSchema.pre('save', async function (next) {
+  // Generate slug from title if not provided
   if (this.isModified('blogTitle') && !this.slug) {
-    this.slug = this.blogTitle
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    let baseSlug = generateSlug(this.blogTitle);
+    let finalSlug = baseSlug;
+    let counter = 1;
+    
+    // Check for duplicate slugs and append counter if needed
+    const MainBlog = mongoose.model('MainBlog');
+    while (true) {
+      const existing = await MainBlog.findOne({ slug: finalSlug, _id: { $ne: this._id } });
+      if (!existing) {
+        break;
+      }
+      finalSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    this.slug = finalSlug;
   }
+
+  // Generate SEO title if not provided
+  if (!this.seoTitle && this.blogTitle) {
+    this.seoTitle = generateSeoTitle(this.blogTitle);
+  }
+
+  // Generate SEO description if not provided
+  if (!this.seoDescription) {
+    const descSource = this.description || '';
+    this.seoDescription = generateSeoDescription(descSource);
+  }
+
+  // Generate canonical URL if not provided
+  if (!this.canonicalUrl && this.slug) {
+    this.canonicalUrl = generateCanonicalUrl('/main-blog', this.slug);
+  }
+
   next();
 });
 

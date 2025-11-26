@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { generateSlug, generateCanonicalUrl, generateSeoTitle, generateSeoDescription } from '../utils/seoUtils.js';
 
 const blogSchema = new mongoose.Schema(
   {
@@ -48,6 +49,11 @@ const blogSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // Canonical URL for SEO
+    canonicalUrl: {
+      type: String,
+      trim: true,
+    },
     // Author reference
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -64,13 +70,26 @@ const blogSchema = new mongoose.Schema(
   }
 );
 
-// Generate slug from title before saving
-blogSchema.pre('save', function (next) {
+// Generate slug and SEO fields before saving
+blogSchema.pre('save', async function (next) {
+  // Generate slug from title if not provided
   if (this.isModified('title') && !this.slug) {
-    this.slug = this.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    let baseSlug = generateSlug(this.title);
+    let finalSlug = baseSlug;
+    let counter = 1;
+    
+    // Check for duplicate slugs and append counter if needed
+    const Blog = mongoose.model('Blog');
+    while (true) {
+      const existing = await Blog.findOne({ slug: finalSlug, _id: { $ne: this._id } });
+      if (!existing) {
+        break;
+      }
+      finalSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    this.slug = finalSlug;
   }
   
   // Auto-generate description from content if not provided
@@ -78,6 +97,22 @@ blogSchema.pre('save', function (next) {
     // Strip HTML tags and get first 150 characters
     const textContent = this.content.replace(/<[^>]*>/g, '').trim();
     this.description = textContent.substring(0, 150) + (textContent.length > 150 ? '...' : '');
+  }
+
+  // Generate metaTitle if not provided
+  if (!this.metaTitle && this.title) {
+    this.metaTitle = generateSeoTitle(this.title);
+  }
+
+  // Generate metaDescription if not provided
+  if (!this.metaDescription) {
+    const descSource = this.description || this.content || '';
+    this.metaDescription = generateSeoDescription(descSource);
+  }
+
+  // Generate canonical URL if not provided
+  if (!this.canonicalUrl && this.slug) {
+    this.canonicalUrl = generateCanonicalUrl('/blog', this.slug);
   }
   
   next();
