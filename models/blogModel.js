@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { generateSlug, generateCanonicalUrl, generateSeoTitle, generateSeoDescription } from '../utils/seoUtils.js';
-
+// testing comments // for testing
 const blogSchema = new mongoose.Schema(
   {
     title: {
