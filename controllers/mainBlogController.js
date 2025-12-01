@@ -129,7 +129,7 @@ export const getMainBlogBySlug = async (req, res, next) => {
 // @access  Private/Admin
 export const createMainBlog = async (req, res, next) => {
   try {
-    const { blogTitle, description, isPublished } = req.body;
+    const { blogTitle, description, isPublished, seoTitle, seoDescription, slug, canonicalUrl } = req.body;
 
     // Validate required fields
     if (!blogTitle || !description) {
@@ -147,9 +147,15 @@ export const createMainBlog = async (req, res, next) => {
       createdBy: req.user._id,
     };
 
+    // Add SEO fields if provided
+    if (seoTitle) blogData.seoTitle = seoTitle.trim();
+    if (seoDescription) blogData.seoDescription = seoDescription.trim();
+    if (slug) blogData.slug = slug.trim();
+    if (canonicalUrl) blogData.canonicalUrl = canonicalUrl.trim();
+
     // Handle image upload
-    if (req.files && req.files.length > 0) {
-      blogData.image = `/uploads/main-blogs/${req.files[0].filename}`;
+    if (req.file) {
+      blogData.image = `/uploads/main-blogs/${req.file.filename}`;
     }
 
     const blog = await MainBlog.create(blogData);
@@ -181,7 +187,7 @@ export const createMainBlog = async (req, res, next) => {
 // @access  Private/Admin
 export const updateMainBlog = async (req, res, next) => {
   try {
-    const { blogTitle, description, isPublished } = req.body;
+    const { blogTitle, description, isPublished, seoTitle, seoDescription, slug, canonicalUrl } = req.body;
 
     const blog = await MainBlog.findById(req.params.id);
 
@@ -198,9 +204,15 @@ export const updateMainBlog = async (req, res, next) => {
     if (isPublished !== undefined) {
       blog.isPublished = isPublished === true || isPublished === 'true';
     }
+    
+    // Update SEO fields if provided
+    if (seoTitle !== undefined) blog.seoTitle = seoTitle ? seoTitle.trim() : '';
+    if (seoDescription !== undefined) blog.seoDescription = seoDescription ? seoDescription.trim() : '';
+    if (slug !== undefined) blog.slug = slug ? slug.trim() : '';
+    if (canonicalUrl !== undefined) blog.canonicalUrl = canonicalUrl ? canonicalUrl.trim() : '';
 
     // Handle image upload
-    if (req.files && req.files.length > 0) {
+    if (req.file) {
       // Delete old image if exists
       if (blog.image) {
         const oldImagePath = path.join(__dirname, '..', blog.image);
@@ -208,7 +220,7 @@ export const updateMainBlog = async (req, res, next) => {
           fs.unlinkSync(oldImagePath);
         }
       }
-      blog.image = `/uploads/main-blogs/${req.files[0].filename}`;
+      blog.image = `/uploads/main-blogs/${req.file.filename}`;
     }
 
     // Regenerate slug if title changed
