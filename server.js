@@ -17,12 +17,31 @@ import mainBlogRoutes from './routes/mainBlogRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import questionRoutes from './routes/questionRoutes.js';
 import specialSectionRoutes from './routes/specialSectionRoutes.js';
+import contactQueryRoutes from './routes/contactQueryRoutes.js';
+
+// Production security packages (install: npm install helmet express-rate-limit compression)
+// import helmet from 'helmet';
+// import rateLimit from 'express-rate-limit';
+// import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
+
+// Validate required environment variables (only in production)
+if (process.env.NODE_ENV === 'production') {
+  const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+  const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+  if (missingEnvVars.length > 0) {
+    console.error('❌ Missing required environment variables:'.red);
+    missingEnvVars.forEach(varName => console.error(`   - ${varName}`));
+    console.error('Please set these in your .env file or environment.'.red);
+    process.exit(1);
+  }
+}
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
@@ -35,10 +54,49 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED REJECTION!'.red);
   console.error(err.name, err.message);
+  // In production, exit on unhandled rejection
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
 });
 
 // Initialize Express app
 const app = express();
+
+// ============================================
+// PRODUCTION SECURITY MIDDLEWARE
+// ============================================
+
+// 1. Security Headers (install: npm install helmet)
+// Uncomment after installing helmet:
+// app.use(helmet({
+//   contentSecurityPolicy: {
+//     directives: {
+//       defaultSrc: ["'self'"],
+//       imgSrc: ["'self'", "data:", "https:"],
+//     },
+//   },
+//   crossOriginEmbedderPolicy: false, // Allow images from external sources
+// }));
+
+// 2. Rate Limiting (install: npm install express-rate-limit)
+// Uncomment after installing express-rate-limit:
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Limit each IP to 100 requests per windowMs in production
+//   message: 'Too many requests from this IP, please try again later.',
+//   standardHeaders: true,
+//   legacyHeaders: false,
+// });
+// app.use('/api/', limiter);
+
+// 3. Compression (install: npm install compression)
+// Uncomment after installing compression:
+// app.use(compression());
+
+// ============================================
+// BASIC MIDDLEWARE
+// ============================================
 
 // Ensure uploads directories exist on startup (important for Railway deployment)
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -63,13 +121,12 @@ connectDB().catch((err) => {
 
 // Root route for Railway health checks
 app.get('/', (req, res) => {
-  console.log('Root route accessed');
-
   const healthPayload = {
     success: true,
     message: 'Backend API is running',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
   };
 
   res.format({
@@ -80,7 +137,7 @@ app.get('/', (req, res) => {
       res
         .status(200)
         .set('Content-Type', 'application/json; charset=utf-8')
-        .send(JSON.stringify(healthPayload));
+        .send(JSON.stringify(healthPayload, null, 2));
     },
     default: () => {
       res.status(200).json(healthPayload);
@@ -102,6 +159,7 @@ const allowedOrigins = [
   'https://car-service-qiezfggti-future-vision.vercel.app',
   'https://convoytravels.knowledgeorbit.com',
   'https://convoytravels.pk',
+  'https://api.convoytravels.pk', // Add if needed
 ];
 
 const corsOptions = {
@@ -115,6 +173,10 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      // In production, log but don't expose error details
+      if (process.env.NODE_ENV === 'production') {
+        console.warn(`CORS blocked request from: ${origin}`);
+      }
       callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
@@ -127,8 +189,12 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Request size limits (prevent large payload attacks)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Logging - use 'combined' format in production for better logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Serve static files from uploads directory
@@ -143,13 +209,21 @@ app.use('/api/v1/main-blogs', mainBlogRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/questions', questionRoutes);
 app.use('/api/v1/special-sections', specialSectionRoutes);
+app.use('/api/v1/contact-queries', contactQueryRoutes);
 
-// Health check route
+// Enhanced health check route
 app.get('/api/v1/health', (req, res) => {
-  res.status(200).json({
+  const health = {
     success: true,
     message: 'Server is running',
-  });
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+  };
+  
+  const statusCode = mongoose.connection.readyState === 1 ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // Handle favicon requests (browsers automatically request this)
@@ -167,11 +241,24 @@ const HOST = process.env.HOST || '0.0.0.0';
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`✅ Server is running on ${HOST}:${PORT}`.bgMagenta);
+  console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`.cyan);
+  console.log(`🔗 Health check: http://${HOST}:${PORT}/api/v1/health`.cyan);
 });
 
-// Graceful shutdown handler
+// Graceful shutdown handlers
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => {
+    console.log('Process terminated');
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
   server.close(() => {
     console.log('Process terminated');
     mongoose.connection.close(false, () => {
