@@ -44,7 +44,6 @@ requiredFiles.forEach(file => {
 console.log('\n🔤 Validating JavaScript syntax...');
 const filesToCheck = [
   'server.js',
-  'server.production.js',
   'config/dbConfig.js',
 ];
 
@@ -75,7 +74,10 @@ try {
     'bcrypt',
     'cors',
     'morgan',
-    'multer'
+    'multer',
+    'helmet',
+    'express-rate-limit',
+    'compression'
   ];
   
   requiredDeps.forEach(dep => {
@@ -111,6 +113,7 @@ const routeFiles = [
   'routes/bookingRoutes.js',
   'routes/questionRoutes.js',
   'routes/specialSectionRoutes.js',
+  'routes/contactQueryRoutes.js',
 ];
 
 routeFiles.forEach(file => {
@@ -134,6 +137,7 @@ const modelFiles = [
   'models/bookingModel.js',
   'models/questionModel.js',
   'models/specialSectionModel.js',
+  'models/contactQueryModel.js',
 ];
 
 modelFiles.forEach(file => {
