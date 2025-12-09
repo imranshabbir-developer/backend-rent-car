@@ -57,6 +57,16 @@ export const errorHandler = (err, req, res, next) => {
 
 // Not found middleware
 export const notFound = (req, res, next) => {
+  // Handle API routes with proper JSON response
+  if (req.originalUrl.startsWith('/api/')) {
+    return res.status(404).json({
+      success: false,
+      message: `API endpoint not found: ${req.method} ${req.originalUrl}`,
+      path: req.originalUrl,
+      method: req.method,
+    });
+  }
+  
   // Handle missing static files (uploads) with proper 404 JSON response
   if (req.originalUrl.startsWith('/uploads')) {
     return res.status(404).json({
