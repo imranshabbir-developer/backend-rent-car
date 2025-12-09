@@ -19,10 +19,10 @@ import questionRoutes from './routes/questionRoutes.js';
 import specialSectionRoutes from './routes/specialSectionRoutes.js';
 import contactQueryRoutes from './routes/contactQueryRoutes.js';
 
-// Production security packages (install: npm install helmet express-rate-limit compression)
-// import helmet from 'helmet';
-// import rateLimit from 'express-rate-limit';
-// import compression from 'compression';
+// Production security packages
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,32 +67,29 @@ const app = express();
 // PRODUCTION SECURITY MIDDLEWARE
 // ============================================
 
-// 1. Security Headers (install: npm install helmet)
-// Uncomment after installing helmet:
-// app.use(helmet({
-//   contentSecurityPolicy: {
-//     directives: {
-//       defaultSrc: ["'self'"],
-//       imgSrc: ["'self'", "data:", "https:"],
-//     },
-//   },
-//   crossOriginEmbedderPolicy: false, // Allow images from external sources
-// }));
+// 1. Security Headers - Protects against XSS, clickjacking, and other attacks
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow images from external sources
+}));
 
-// 2. Rate Limiting (install: npm install express-rate-limit)
-// Uncomment after installing express-rate-limit:
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Limit each IP to 100 requests per windowMs in production
-//   message: 'Too many requests from this IP, please try again later.',
-//   standardHeaders: true,
-//   legacyHeaders: false,
-// });
-// app.use('/api/', limiter);
+// 2. Rate Limiting - Prevents DDoS and brute force attacks
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Limit each IP to 100 requests per windowMs in production
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
 
-// 3. Compression (install: npm install compression)
-// Uncomment after installing compression:
-// app.use(compression());
+// 3. Compression - Reduces bandwidth usage
+app.use(compression());
 
 // ============================================
 // BASIC MIDDLEWARE
@@ -164,8 +161,13 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (e.g., mobile apps, Postman, curl)
-    if (!origin) {
+    // In production, be stricter - don't allow requests with no origin
+    if (process.env.NODE_ENV === 'production' && !origin) {
+      return callback(new Error('CORS: Origin header required in production'), false);
+    }
+    
+    // Allow requests with no origin in development (for Postman, curl, etc.)
+    if (!origin && process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
     
@@ -194,11 +196,27 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Request timeout (30 seconds)
+app.use((req, res, next) => {
+  req.setTimeout(30000, () => {
+    res.status(408).json({
+      success: false,
+      message: 'Request timeout',
+    });
+  });
+  next();
+});
+
 // Logging - use 'combined' format in production for better logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve static files from uploads directory with security headers
+app.use('/uploads', (req, res, next) => {
+  // Set security headers for uploaded files
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use('/api/v1/users', userRoutes);

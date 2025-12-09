@@ -74,7 +74,10 @@ try {
     'bcrypt',
     'cors',
     'morgan',
-    'multer'
+    'multer',
+    'helmet',
+    'express-rate-limit',
+    'compression'
   ];
   
   requiredDeps.forEach(dep => {

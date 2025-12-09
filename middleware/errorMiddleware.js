@@ -4,8 +4,14 @@ export const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error to console
-  console.error(err);
+  // Log error to console (in production, consider using a logging service)
+  console.error('Error:', {
+    name: err.name,
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    path: req.originalUrl,
+    method: req.method,
+  });
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -36,9 +42,16 @@ export const errorHandler = (err, req, res, next) => {
     error = { message, statusCode: 401 };
   }
 
+  // Don't expose error details in production
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const errorMessage = error.statusCode === 500 && !isDevelopment
+    ? 'Internal server error'
+    : (error.message || 'Server Error');
+
   res.status(error.statusCode || 500).json({
     success: false,
-    message: error.message || 'Server Error',
+    message: errorMessage,
+    ...(isDevelopment && { stack: err.stack }), // Only show stack in development
   });
 };
 
