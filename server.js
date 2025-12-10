@@ -63,6 +63,61 @@ process.on('unhandledRejection', (err) => {
 const app = express();
 
 // ============================================
+// CORS CONFIGURATION - MUST BE FIRST
+// ============================================
+
+// ✅ CORS Configuration - MUST be applied FIRST to handle preflight requests
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://car-service-blond-five.vercel.app',
+  'https://car-service-qiezfggti-future-vision.vercel.app',
+  'https://convoytravels.knowledgeorbit.com',
+  'https://convoytravels.pk',
+  'https://api.convoytravels.pk',
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (for direct image access, Postman, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      // Check if origin is from convoytravels.pk domain (allow subdomains)
+      if (origin.includes('convoytravels.pk')) {
+        callback(null, true);
+      } else {
+        // Log blocked requests for debugging
+        console.warn(`⚠️ CORS blocked request from: ${origin}`);
+        // In production, be more strict
+        if (process.env.NODE_ENV === 'production') {
+          callback(new Error(`Not allowed by CORS: ${origin}`));
+        } else {
+          // In development, be more permissive
+          callback(null, true);
+        }
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+// Apply CORS FIRST - before any other middleware
+app.use(cors(corsOptions));
+
+// Handle OPTIONS requests explicitly for all routes
+app.options('*', cors(corsOptions));
+
+// ============================================
 // PRODUCTION SECURITY MIDDLEWARE
 // ============================================
 
@@ -79,12 +134,14 @@ app.use((req, res, next) => {
 });
 
 // 2. Rate Limiting - Prevents DDoS and brute force attacks
+// Skip rate limiting for OPTIONS (preflight) requests
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Limit each IP to 100 requests per windowMs in production
+  max: process.env.NODE_ENV === 'production' ? 500 : 1000, // Increased limit: 500 requests per 15 minutes in production
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // Skip rate limiting for preflight requests
 });
 app.use('/api/', limiter);
 
@@ -149,53 +206,6 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ✅ CORS Configuration - Allow specific origins with all methods
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://car-service-blond-five.vercel.app',
-  'https://car-service-qiezfggti-future-vision.vercel.app',
-  'https://convoytravels.knowledgeorbit.com',
-  'https://convoytravels.pk',
-  'https://api.convoytravels.pk', // Add if needed
-];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (for direct image access, Postman, curl, etc.)
-    // This is important for <img> tags which may not send origin header
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      // Check if origin is from convoytravels.pk domain (allow subdomains)
-      if (origin.includes('convoytravels.pk')) {
-        callback(null, true);
-      } else {
-        // Log blocked requests for debugging
-        console.warn(`⚠️ CORS blocked request from: ${origin}`);
-        // In production, be more strict
-        if (process.env.NODE_ENV === 'production') {
-          callback(new Error(`Not allowed by CORS: ${origin}`));
-        } else {
-          // In development, be more permissive
-          callback(null, true);
-        }
-      }
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-};
-
-// Middleware
-app.use(cors(corsOptions));
 
 // Request size limits (prevent large payload attacks)
 app.use(express.json({ limit: '10mb' }));
