@@ -37,6 +37,6 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Uploads
-# uploads/
+Uploads
+uploads/
 
