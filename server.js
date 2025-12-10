@@ -225,6 +225,9 @@ app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
+  // CRITICAL: Set Cross-Origin-Resource-Policy to allow cross-origin access
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -235,8 +238,8 @@ app.use('/uploads', (req, res, next) => {
   // Allow images to be embedded (change from DENY to SAMEORIGIN for better compatibility)
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   
-  // Cache control for images (1 day)
-  res.setHeader('Cache-Control', 'public, max-age=86400');
+  // Cache control for images (1 day) - but add must-revalidate to prevent stale cache
+  res.setHeader('Cache-Control', 'public, max-age=86400, must-revalidate');
   
   next();
 }, express.static(path.join(__dirname, 'uploads'), {
@@ -244,8 +247,13 @@ app.use('/uploads', (req, res, next) => {
   maxAge: '1d', // Cache for 1 day
   etag: true, // Enable ETag for better caching
   lastModified: true, // Enable Last-Modified header
-  // Set proper MIME types
+  // Set proper MIME types and CORS headers
   setHeaders: (res, filePath) => {
+    // CRITICAL: Set Cross-Origin-Resource-Policy for each file
+    // This fixes ERR_BLOCKED_BY_RESPONSE.NotSameOrigin error
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
     // Ensure proper content type for images
     if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
       res.setHeader('Content-Type', 'image/jpeg');
