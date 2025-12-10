@@ -68,6 +68,7 @@ const app = express();
 // ============================================
 
 // 1. Security Headers - Protects against XSS, clickjacking, and other attacks
+// IMPORTANT: Disable CORP in Helmet - we'll set it manually for /uploads route only
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -76,7 +77,7 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false, // Allow images from external sources
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow images to be loaded from any origin
+  crossOriginResourcePolicy: false, // Disable CORP - we'll set it manually for /uploads
 }));
 
 // 2. Rate Limiting - Prevents DDoS and brute force attacks
@@ -219,13 +220,16 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // Serve static files from uploads directory with security and CORS headers
 // IMPORTANT: Images are public assets, so we allow all origins for CORS
 app.use('/uploads', (req, res, next) => {
+  // CRITICAL: Remove any existing CORP header that might block requests
+  res.removeHeader('Cross-Origin-Resource-Policy');
+  
   // Always allow CORS for images (public assets)
-  // This is safe because images don't contain sensitive data
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
   // CRITICAL: Set Cross-Origin-Resource-Policy to allow cross-origin access
+  // This MUST be set to 'cross-origin' to fix ERR_BLOCKED_BY_RESPONSE.NotSameOrigin
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   
   // Handle preflight requests
@@ -235,7 +239,6 @@ app.use('/uploads', (req, res, next) => {
   
   // Set security headers for uploaded files
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  // Allow images to be embedded (change from DENY to SAMEORIGIN for better compatibility)
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   
   // Cache control for images (1 day) - but add must-revalidate to prevent stale cache
@@ -244,11 +247,14 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(path.join(__dirname, 'uploads'), {
   // Additional static file options
-  maxAge: '1d', // Cache for 1 day
-  etag: true, // Enable ETag for better caching
-  lastModified: true, // Enable Last-Modified header
+  maxAge: '1d',
+  etag: true,
+  lastModified: true,
   // Set proper MIME types and CORS headers
   setHeaders: (res, filePath) => {
+    // CRITICAL: Remove any existing CORP header first
+    res.removeHeader('Cross-Origin-Resource-Policy');
+    
     // CRITICAL: Set Cross-Origin-Resource-Policy for each file
     // This fixes ERR_BLOCKED_BY_RESPONSE.NotSameOrigin error
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
