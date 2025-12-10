@@ -225,8 +225,10 @@ app.use('/uploads', (req, res, next) => {
         res.setHeader('Access-Control-Allow-Origin', origin);
       }
     } else {
-      // In development, be more permissive
-      res.setHeader('Access-Control-Allow-Origin', origin);
+      // In development, be more permissive - allow localhost
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
     }
   } else {
     // Allow requests without origin (for direct image access)
@@ -247,7 +249,22 @@ app.use('/uploads', (req, res, next) => {
   maxAge: '1d', // Cache for 1 day
   etag: true, // Enable ETag for better caching
   lastModified: true, // Enable Last-Modified header
+  // Add fallback for missing files
+  fallthrough: true, // Continue to next middleware if file not found
 }));
+
+// Handle 404 for missing upload files with proper JSON response
+app.use('/uploads', (req, res) => {
+  // Log missing file requests in development
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(`⚠️  Missing upload file requested: ${req.originalUrl}`);
+  }
+  res.status(404).json({
+    success: false,
+    message: 'Image not found',
+    path: req.originalUrl,
+  });
+});
 
 // API Routes
 app.use('/api/v1/users', userRoutes);
