@@ -223,13 +223,16 @@ app.use('/uploads', (req, res, next) => {
       // In production, allow images from the frontend domain
       if (origin.includes('convoytravels.pk')) {
         res.setHeader('Access-Control-Allow-Origin', origin);
+      } else {
+        // Allow all origins for images in production (public assets)
+        res.setHeader('Access-Control-Allow-Origin', '*');
       }
     } else {
       // In development, be more permissive
       res.setHeader('Access-Control-Allow-Origin', origin);
     }
   } else {
-    // Allow requests without origin (for direct image access)
+    // Allow requests without origin (for direct image access - important for <img> tags)
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
   
@@ -247,6 +250,19 @@ app.use('/uploads', (req, res, next) => {
   maxAge: '1d', // Cache for 1 day
   etag: true, // Enable ETag for better caching
   lastModified: true, // Enable Last-Modified header
+  // Set proper MIME types
+  setHeaders: (res, filePath) => {
+    // Ensure proper content type for images
+    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (filePath.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (filePath.endsWith('.webp')) {
+      res.setHeader('Content-Type', 'image/webp');
+    } else if (filePath.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    }
+  },
 }));
 
 // API Routes
@@ -263,20 +279,42 @@ app.use('/api/v1/contact-queries', contactQueryRoutes);
 // Test image serving endpoint
 app.get('/api/v1/test-image', (req, res) => {
   const uploadsPath = path.join(__dirname, 'uploads');
+  const carsPath = path.join(uploadsPath, 'cars');
+  
+  // Get list of files in cars directory
+  let carFiles = [];
+  try {
+    if (fs.existsSync(carsPath)) {
+      carFiles = fs.readdirSync(carsPath).slice(0, 5); // Get first 5 files
+    }
+  } catch (err) {
+    console.error('Error reading cars directory:', err);
+  }
+  
   const testFiles = {
     uploadsDir: uploadsPath,
     exists: fs.existsSync(uploadsPath),
-    carsDir: fs.existsSync(path.join(uploadsPath, 'cars')),
+    carsDir: fs.existsSync(carsPath),
     categoriesDir: fs.existsSync(path.join(uploadsPath, 'categories')),
     mainBlogsDir: fs.existsSync(path.join(uploadsPath, 'main-blogs')),
+    carFilesCount: carFiles.length,
+    sampleCarFiles: carFiles,
   };
+  
+  // Build sample image URLs
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const sampleImageUrls = carFiles.length > 0 
+    ? carFiles.map(file => `${baseUrl}/uploads/cars/${file}`)
+    : [];
   
   res.json({
     success: true,
     message: 'Image serving test',
     testFiles,
     staticRoute: '/uploads',
-    baseUrl: `${req.protocol}://${req.get('host')}`,
+    baseUrl: baseUrl,
+    sampleImageUrls: sampleImageUrls,
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
