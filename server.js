@@ -120,7 +120,7 @@ connectDB().catch((err) => {
 app.get('/', (req, res) => {
   const healthPayload = {
     success: true,
-    message: 'Backend API is running...!!',
+    message: 'Convoy Travels - Backend API is running...!!',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production',
