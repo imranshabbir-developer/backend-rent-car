@@ -72,10 +72,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "http:", "api.convoytravels.pk", "*.convoytravels.pk"],
     },
   },
   crossOriginEmbedderPolicy: false, // Allow images from external sources
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow images to be loaded from any origin
 }));
 
 // 2. Rate Limiting - Prevents DDoS and brute force attacks
@@ -161,13 +162,9 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // In production, be stricter - don't allow requests with no origin
-    if (process.env.NODE_ENV === 'production' && !origin) {
-      return callback(new Error('CORS: Origin header required in production'), false);
-    }
-    
-    // Allow requests with no origin in development (for Postman, curl, etc.)
-    if (!origin && process.env.NODE_ENV !== 'production') {
+    // Allow requests with no origin (for direct image access, Postman, curl, etc.)
+    // This is important for <img> tags which may not send origin header
+    if (!origin) {
       return callback(null, true);
     }
     
@@ -175,11 +172,20 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      // In production, log but don't expose error details
-      if (process.env.NODE_ENV === 'production') {
-        console.warn(`CORS blocked request from: ${origin}`);
+      // Check if origin is from convoytravels.pk domain (allow subdomains)
+      if (origin.includes('convoytravels.pk')) {
+        callback(null, true);
+      } else {
+        // Log blocked requests for debugging
+        console.warn(`⚠️ CORS blocked request from: ${origin}`);
+        // In production, be more strict
+        if (process.env.NODE_ENV === 'production') {
+          callback(new Error(`Not allowed by CORS: ${origin}`));
+        } else {
+          // In development, be more permissive
+          callback(null, true);
+        }
       }
-      callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
   credentials: true,
@@ -211,29 +217,17 @@ app.use((req, res, next) => {
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Serve static files from uploads directory with security and CORS headers
+// IMPORTANT: Images are public assets, so we allow all origins for CORS
 app.use('/uploads', (req, res, next) => {
-  // Set CORS headers for images (allow cross-origin requests from any origin for public images)
-  const origin = req.headers.origin;
-  if (origin) {
-    // Allow requests from allowed origins, or allow all origins for public images
-    if (allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    } else if (process.env.NODE_ENV === 'production') {
-      // In production, allow images from the frontend domain
-      if (origin.includes('convoytravels.pk')) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-      } else {
-        // Allow all origins for images in production (public assets)
-        res.setHeader('Access-Control-Allow-Origin', '*');
-      }
-    } else {
-      // In development, be more permissive
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    }
-  } else {
-    // Allow requests without origin (for direct image access - important for <img> tags)
-    res.setHeader('Access-Control-Allow-Origin', '*');
+  // Always allow CORS for images (public assets)
+  // This is safe because images don't contain sensitive data
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
   
   // Set security headers for uploaded files
