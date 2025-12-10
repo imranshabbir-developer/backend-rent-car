@@ -20,7 +20,6 @@ import specialSectionRoutes from './routes/specialSectionRoutes.js';
 import contactQueryRoutes from './routes/contactQueryRoutes.js';
 
 // Production security packages
-import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 
@@ -67,18 +66,17 @@ const app = express();
 // PRODUCTION SECURITY MIDDLEWARE
 // ============================================
 
-// 1. Security Headers - Protects against XSS, clickjacking, and other attacks
-// IMPORTANT: Disable CORP in Helmet - we'll set it manually for /uploads route only
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:", "http:", "api.convoytravels.pk", "*.convoytravels.pk"],
-    },
-  },
-  crossOriginEmbedderPolicy: false, // Allow images from external sources
-  crossOriginResourcePolicy: false, // Disable CORP - we'll set it manually for /uploads
-}));
+// 1. Basic Security Headers (without Helmet to avoid CORP conflicts)
+app.use((req, res, next) => {
+  // Only set security headers for non-upload routes
+  if (!req.path.startsWith('/uploads')) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  }
+  next();
+});
 
 // 2. Rate Limiting - Prevents DDoS and brute force attacks
 const limiter = rateLimit({
@@ -122,10 +120,10 @@ connectDB().catch((err) => {
 app.get('/', (req, res) => {
   const healthPayload = {
     success: true,
-    message: 'Backend API is running',
+    message: 'Backend API is running...!!',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env.NODE_ENV || 'production',
   };
 
   res.format({
