@@ -210,13 +210,44 @@ app.use((req, res, next) => {
 // Logging - use 'combined' format in production for better logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Serve static files from uploads directory with security headers
+// Serve static files from uploads directory with security and CORS headers
 app.use('/uploads', (req, res, next) => {
+  // Set CORS headers for images (allow cross-origin requests from any origin for public images)
+  const origin = req.headers.origin;
+  if (origin) {
+    // Allow requests from allowed origins, or allow all origins for public images
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else if (process.env.NODE_ENV === 'production') {
+      // In production, allow images from the frontend domain
+      if (origin.includes('convoytravels.pk')) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
+    } else {
+      // In development, be more permissive
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+  } else {
+    // Allow requests without origin (for direct image access)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
   // Set security headers for uploaded files
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
+  // Allow images to be embedded (change from DENY to SAMEORIGIN for better compatibility)
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  
+  // Cache control for images (1 day)
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  
   next();
-}, express.static(path.join(__dirname, 'uploads')));
+}, express.static(path.join(__dirname, 'uploads'), {
+  // Additional static file options
+  maxAge: '1d', // Cache for 1 day
+  etag: true, // Enable ETag for better caching
+  lastModified: true, // Enable Last-Modified header
+}));
 
 // API Routes
 app.use('/api/v1/users', userRoutes);
@@ -228,6 +259,26 @@ app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/questions', questionRoutes);
 app.use('/api/v1/special-sections', specialSectionRoutes);
 app.use('/api/v1/contact-queries', contactQueryRoutes);
+
+// Test image serving endpoint
+app.get('/api/v1/test-image', (req, res) => {
+  const uploadsPath = path.join(__dirname, 'uploads');
+  const testFiles = {
+    uploadsDir: uploadsPath,
+    exists: fs.existsSync(uploadsPath),
+    carsDir: fs.existsSync(path.join(uploadsPath, 'cars')),
+    categoriesDir: fs.existsSync(path.join(uploadsPath, 'categories')),
+    mainBlogsDir: fs.existsSync(path.join(uploadsPath, 'main-blogs')),
+  };
+  
+  res.json({
+    success: true,
+    message: 'Image serving test',
+    testFiles,
+    staticRoute: '/uploads',
+    baseUrl: `${req.protocol}://${req.get('host')}`,
+  });
+});
 
 // Enhanced health check route
 app.get('/api/v1/health', (req, res) => {
