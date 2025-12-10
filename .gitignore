@@ -37,6 +37,11 @@ coverage/
 .DS_Store
 Thumbs.db
 
-Uploads
+# Uploads folder - do not commit uploaded files
 uploads/
+Uploads/
+**/uploads/
+**/Uploads/
+uploads
+Uploads
 
